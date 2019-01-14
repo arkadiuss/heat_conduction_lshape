@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 class Esq:
 	def __init__(self, a1, a2, b1, b2):
 		self.a1 = a1;
@@ -115,4 +117,8 @@ def u (x1,x2):
 			res += X[fiToe[i][j]]*fi(j,E[i],x1,x2)
 	return res		
 print(X)
-print(u(0.5,0.5))		
+x = [ i*0.01 for i in range(-100,101)]
+y = [ i*0.01 for i in range(-100,101)]
+z = [[ u(x[i],y[j]) for j in range(0,len(y))] for i in range(0,len(x))]
+plt.pcolormesh(x,y,z,cmap=plt.cm.hot)
+plt.show()		
