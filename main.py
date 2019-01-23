@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 
 class Esq:
 	def __init__(self, a1, a2, b1, b2):
@@ -18,6 +20,10 @@ ficflex = [
 ]
 
 def fi(i,e,x1,x2):
+	if(x1<e.b1 or x1 > 1 + e.b1):
+		return 0
+	if(x2<e.b2 or x2 > 1 + e.b2): 
+		return 0
 	return ficflex[i-1]((x1-e.b1)/e.a1,(x2-e.b2)/e.a2)
 
 def df_jdx_i(e,j,i):
@@ -25,7 +31,7 @@ def df_jdx_i(e,j,i):
 		[-1/e.a1,1/e.a1,1/e.a1,-1/e.a1],
 		[-1/e.a2,-1/e.a2,1/e.a2,1/e.a2]
 	]
-	return dfi[i-1][j-1]
+	return dfi[i-1][j-1]/2
 	
 def b_ij(e,i,j):
 	res = 0
@@ -38,12 +44,12 @@ def onNeumann(p1,p2):
 
 def l_i(e,g,i):
 	points = [(0,0),(1,0),(1,1),(0,1)]
-	res = 0;
+	res = 0
 	for j in range(0,len(points)):
 		p1 = points[j]
 		p2 = points[(j+1)%len(points)]
-		p1 = (p1[0] - e.b1, p1[1] - e.b2)
-		p2 = (p2[0] - e.b1, p2[1] - e.b2)
+		p1 = (p1[0] + e.b1, p1[1] + e.b2)
+		p2 = (p2[0] + e.b1, p2[1] + e.b2)
 		if(onNeumann(p1,p2)):
 			ps = ((p1[0]+p2[0])/2, (p1[1]+p2[1])/2)
 			res += g(ps[0], ps[1])*fi(i,e,ps[0],ps[1])*( e.a2 if p1[0]==p2[0] else e.a1)
@@ -55,13 +61,13 @@ def gauss(A,Y):
 		tmp = []
 		for j in range(0, len(A[i])):
 			tmp.append(A[i][j])
+		tmp.append(Y[i])
 		B.append(tmp)
 			
 	for i in range(0,len(B)):
-		if(B[i][i]==0):
-			for j in range(i+1,len(B)):
-				if(B[j][i]!=0):
-					B[j],B[i]=B[i],B[j]
+		for j in range(i+1,len(B)):
+			if(B[j][i]>B[i][i]):
+				B[j],B[i]=B[i],B[j]
 		a = B[i][i]
 		if(a!=0):
 			for j in range(i+1,len(B)):
@@ -71,9 +77,9 @@ def gauss(A,Y):
 	print(B)
 	X = []
 	for i in reversed(range(0,len(B))):
-		tmp = Y[i]
-		for j in reversed(range(i+1,len(B[i]))):
-			tmp -= B[i][j]*X[len(B[i])-j-1]
+		tmp = B[i][-1]
+		for j in reversed(range(i+1,len(B[i])-1)):
+			tmp -= B[i][j]*X[len(B[i])-j-2]
 		X.append(tmp/B[i][i])	
 	X.reverse()	
 	return X			
@@ -103,10 +109,11 @@ for j in range(0, 8):
 	B[4][j]=0
 	B[6][j]=0
 L[3]=0
+L[4]=0
 L[6]=0
 B[3][3]=1
 B[4][4]=1 
-B[6][6]=1 			
+B[6][6]=1 		
 X = gauss(B,L)
 def u (x1,x2): 
 	if(x1<0 and x2<0):
@@ -114,11 +121,19 @@ def u (x1,x2):
 	res = 0
 	for i in range(0,3):
 		for j in range(0,4):
-			res += X[fiToe[i][j]]*fi(j,E[i],x1,x2)
+			res += X[fiToe[i][j]]*fi(j+1,E[i],x1,x2)
 	return res		
 print(X)
-x = [ i*0.01 for i in range(-100,101)]
-y = [ i*0.01 for i in range(-100,101)]
-z = [[ u(x[i],y[j]) for j in range(0,len(y))] for i in range(0,len(x))]
-plt.pcolormesh(x,y,z,cmap=plt.cm.hot)
-plt.show()		
+x = np.arange(-1,1,0.003)
+y = np.arange(-1,1,0.003)
+xs, ys = np.meshgrid(x,y)
+print(u(0.5,-0.5), u(-0.5, 0.5))
+#z = np.array([[ u(x[i],y[j]) for j in range(0,len(y))] for i in range(0,len(x))])
+zs = np.array([max(u(x,y),0) for x,y in zip(np.ravel(xs), np.ravel(ys))])
+zs = zs.reshape(xs.shape)
+#plt.pcolormesh(xs,ys,z,cmap=plt.cm.hot)
+#plt.show()
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+ax.plot_surface(xs,ys,zs)	
+plt.show()	
