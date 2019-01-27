@@ -1,16 +1,17 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+import math as m
 
 class Esq:
 	def __init__(self, a1, a2, b1, b2):
-		self.a1 = a1;
-		self.a2 = a2;
-		self.b1 = b1;
-		self.b2 = b2;
+		self.a1 = a1
+		self.a2 = a2
+		self.b1 = b1
+		self.b2 = b2
 
 def gfunc(ag):
-	return lambda x1,x2: ag
+	return lambda x1,x2: ag*m.sqrt(x1**2+x2**2)
 
 ficflex = [
 	lambda x1, x2: (1 - x1)*(1 - x2),
@@ -31,13 +32,19 @@ def df_jdx_i(e,j,i):
 		[-1/e.a1,1/e.a1,1/e.a1,-1/e.a1],
 		[-1/e.a2,-1/e.a2,1/e.a2,1/e.a2]
 	]
-	return dfi[i-1][j-1]/2
+	return dfi[i-1][j-1]
 	
 def b_ij(e,i,j):
 	res = 0
 	for ix in range(1,3):
 		res += df_jdx_i(e,i,ix)*df_jdx_i(e,j,ix)
 	return e.a1*e.a2*res
+
+def b_ui(e,i,j,u0):
+	res = 0
+	for ix in range(1,3):
+		res += df_jdx_i(e,i,ix)*df_jdx_i(e,j,ix)
+	return e.a1*e.a2*res*u0
 
 def onNeumann(p1,p2):
 	return p1 != (0,0) and p2 != (0,0)
@@ -74,7 +81,6 @@ def gauss(A,Y):
 				coef = B[j][i]/a
 				for k in range(i,len(B[j])):
 					B[j][k]-=B[i][k]*coef
-	print(B)
 	X = []
 	for i in reversed(range(0,len(B))):
 		tmp = B[i][-1]
@@ -86,6 +92,7 @@ def gauss(A,Y):
 
 E = [Esq(1,1,-1,0),Esq(1,1,0,0),Esq(1,1,0,-1)]
 ag = float(input())
+u0 = float(input())
 g = gfunc(ag)
 
 fiToe = [
@@ -99,8 +106,10 @@ L = [0 for i in range(0,8)]
 for k in range(0,len(E)):
 	for i in range(1,5):
 		i1 = fiToe[k][i-1]
-		L[i1] += l_i(E[k], g, i)
+		L[i1] += l_i(E[k], g, i) 
 		for j in range(1,5):
+			if(i==1 or (k==0 and i ==2) or (k==2 and i==4)):
+				L[i1] -= b_ui(E[k], j, i, u0)
 			j1 = fiToe[k][j-1]
 			B[i1][j1] += b_ij(E[k],i,j)	
 			
@@ -117,15 +126,14 @@ B[6][6]=1
 X = gauss(B,L)
 def u (x1,x2): 
 	if(x1<0 and x2<0):
-		return 0
+		return u0
 	res = 0
 	for i in range(0,3):
 		for j in range(0,4):
 			res += X[fiToe[i][j]]*fi(j+1,E[i],x1,x2)
-	return res		
-print(X)
-x = np.arange(-1,1,0.003)
-y = np.arange(-1,1,0.003)
+	return max(res,0) + u0
+x = np.arange(-1,1,0.01)
+y = np.arange(-1,1,0.01)
 xs, ys = np.meshgrid(x,y)
 print(u(0.5,-0.5), u(-0.5, 0.5))
 #z = np.array([[ u(x[i],y[j]) for j in range(0,len(y))] for i in range(0,len(x))])
